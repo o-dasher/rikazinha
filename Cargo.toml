@@ -1,0 +1,13 @@
+[package]
+name = "rika"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+dotenv = "0.15.0"
+paris = { version = "1.5.13", features = ["no_logger", "macros"] }
+pipeline = "0.5.0"
+poise = "0.5.2"
+tokio = { version = "1.24.1", features = ["rt-multi-thread", "macros"] }
