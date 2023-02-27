@@ -37,17 +37,18 @@ pub async fn setup(
     ready: &serenity_prelude::Ready,
     framework: &Framework<RikaData, RikaError>,
 ) -> Result<RikaData, RikaError> {
-    let registered = match EnvVar::DevGuild.get_parsed() {
-        Err(why) => Err(why),
-        Ok(dev_guild_id) => {
-            let commands = &framework.options().commands;
+    let registered = EnvVar::DevGuild.get_parsed().map(|dev_guild_id| {
+        let commands = &framework.options().commands;
 
-            Ok(poise::builtins::register_in_guild(ctx, commands, GuildId(dev_guild_id)).await?)
-        }
-    };
+        poise::builtins::register_in_guild(ctx, commands, GuildId(dev_guild_id))
+    });
 
     match registered {
-        Ok(_) => info!("Finished registering commands to development guild"),
+        Ok(future) => {
+            future.await?;
+
+            info!("Finished registering commands to development guild");
+        }
         Err(why) => propagate_error(why.into(), ctx, ready, framework),
     }
 
