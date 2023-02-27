@@ -6,8 +6,17 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.69"
+convert_case = "0.6.0"
+derive_more = "0.99.17"
 dotenv = "0.15.0"
-paris = { version = "1.5.13", features = ["no_logger", "macros"] }
 pipeline = "0.5.0"
 poise = "0.5.2"
+reqwest = "0.11.14"
+rosu-v2 = "0.7.0"
+strum = "0.24.1"
+strum_macros = "0.24.3"
+thiserror = "1.0.38"
 tokio = { version = "1.24.1", features = ["rt-multi-thread", "macros"] }
+tracing = "0.1.37"
+tracing-subscriber = "0.3.16"
