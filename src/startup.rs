@@ -1,3 +1,4 @@
+
 use poise::{
     serenity_prelude::{self, GuildId},
     Framework, FrameworkError,
@@ -52,7 +53,7 @@ pub async fn setup(
         Err(why) => propagate_error(why.into(), ctx, ready, framework),
     }
 
-    let osu_client = create_osu_client().await.unwrap();
+    let osu_client = create_osu_client().await.map_err(anyhow::Error::msg)?;
 
     Ok(RikaData { osu: osu_client })
 }

@@ -29,20 +29,20 @@ impl EnvVar {
 
     pub fn get(self) -> Result<String, anyhow::Error> {
         let key: &str = self.into();
-        let env_var_display = Self::env_var_display(key);
 
-        env::var(key).context(format!("Missing {env_var_display}"))
+        env::var(key).context(format!("Missing {}", Self::env_var_display(key)))
     }
 
     pub fn get_parsed<T: FromStr>(&self) -> Result<T, anyhow::Error>
     where
         T::Err: 'static + Send + Sync + Display + Debug,
     {
-        let env_var_display = Self::env_var_display(self.into());
-
         self.get()?
             .parse()
             .map_err(anyhow::Error::msg)
-            .context(format!("Failed to parse {env_var_display}"))
+            .context(format!(
+                "Failed to parse {}",
+                Self::env_var_display(self.into())
+            ))
     }
 }

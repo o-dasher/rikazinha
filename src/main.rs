@@ -22,10 +22,9 @@ pub type Context<'a> = poise::Context<'a, RikaData, RikaError>;
 #[tokio::main]
 async fn main() {
     dotenv().ok();
+    Subscriber::builder().try_init().unwrap();
 
     let bot_token = EnvVar::BotToken.get().unwrap();
-
-    Subscriber::builder().try_init().unwrap();
 
     let result = Framework::<RikaData, RikaError>::builder()
         .options(FrameworkOptions {
