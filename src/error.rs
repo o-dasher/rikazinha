@@ -1,4 +1,4 @@
-use anyhow::anyhow;
+
 use derive_more::From;
 use poise::serenity_prelude::{self, Colour};
 use thiserror::Error;
