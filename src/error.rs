@@ -1,11 +1,14 @@
+use anyhow::anyhow;
 use derive_more::From;
-use poise::serenity_prelude;
-use strum_macros::Display;
+use poise::serenity_prelude::{self, Colour};
 use thiserror::Error;
 
-#[derive(Debug, Display, From, Error)]
+#[derive(Debug, From, Error)]
 pub enum RikaError {
+    #[error(transparent)]
     Serenity(serenity_prelude::Error),
+
+    #[error(transparent)]
     Anyhow(anyhow::Error),
 }
 
@@ -20,8 +23,10 @@ pub async fn on_error<U, E: std::fmt::Display + std::fmt::Debug>(
             tracing::warn!("EventHandler could not handle event: {error:?} on event {event:?}")
         }
         poise::FrameworkError::Command { error, ctx } => {
-            ctx.say(error.to_string()).await?;
-            tracing::warn!("FramworkCommand: {error}")
+            tracing::warn!("FrameworkCommand: {error}");
+
+            ctx.send(|r| r.embed(|e| e.description(error.to_string()).color(Colour::RED)))
+                .await?;
         }
         poise::FrameworkError::ArgumentParse { input, .. } => {
             tracing::error!("Parsed unwanted message command on input: {input:?}")
@@ -99,5 +104,6 @@ pub async fn on_error<U, E: std::fmt::Display + std::fmt::Debug>(
             tracing::error!("Not covered error: {unknown_error}");
         }
     }
+
     Ok(())
 }

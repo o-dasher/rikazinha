@@ -8,18 +8,13 @@ use anyhow::Context;
 use derive_more::From;
 use strum_macros::IntoStaticStr;
 
-#[derive(Clone, Copy)]
-pub enum OsuEnvVar {
-    ClientId,
-    ClientSecret,
-}
-
 #[derive(IntoStaticStr, Clone, Copy, From)]
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum EnvVar {
     BotToken,
     DevGuild,
-    Osu(OsuEnvVar),
+    OsuClientId,
+    OsuClientSecret,
 }
 
 impl EnvVar {

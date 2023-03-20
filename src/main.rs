@@ -9,15 +9,16 @@ use tracing_subscriber::fmt::Subscriber;
 use utils::env::EnvVar;
 
 mod commands;
+mod error;
+mod messages;
 mod startup;
 mod utils;
-mod error;
 
 pub struct RikaData {
     osu: Osu,
 }
 
-pub type Context<'a> = poise::Context<'a, RikaData, RikaError>;
+pub type RikaContext<'a> = poise::Context<'a, RikaData, RikaError>;
 
 #[tokio::main]
 async fn main() {
@@ -28,7 +29,7 @@ async fn main() {
 
     let result = Framework::<RikaData, RikaError>::builder()
         .options(FrameworkOptions {
-            commands: vec![],
+            commands: vec![commands::osu::osu(), commands::fun::avatar::avatar()],
             on_error: |err| {
                 Box::pin(async move {
                     if let Err(e) = error::on_error(err).await {
