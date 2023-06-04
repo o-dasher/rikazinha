@@ -1,5 +1,3 @@
-
-
 use anyhow::anyhow;
 use poise::{
     builtins::{register_globally, register_in_guild},
@@ -7,6 +5,7 @@ use poise::{
     Framework, FrameworkError,
 };
 use rosu_v2::{prelude::OsuError, Osu};
+use strum_macros::IntoStaticStr;
 use tracing::info;
 
 use crate::{error::RikaError, utils::env::EnvVar, RikaData};
@@ -32,9 +31,10 @@ pub fn propagate_error(
     });
 }
 
-enum RegisterType<T> {
-    Globally(T),
-    OnGuild(T),
+#[derive(IntoStaticStr)]
+enum RegisterType {
+    Globally,
+    OnGuild,
 }
 
 pub async fn setup(
@@ -44,25 +44,23 @@ pub async fn setup(
 ) -> Result<RikaData, RikaError> {
     let commands = &framework.options().commands;
 
-    let registered = match EnvVar::DevGuild.get_parsed() {
-        Ok(dev_guild_id) => {
-            RegisterType::OnGuild(register_in_guild(ctx, commands, GuildId(dev_guild_id)).await)
-        }
-        Err(..) => RegisterType::Globally(register_globally(ctx, commands).await),
+    let (response, register_type) = match EnvVar::DevGuild.get_parsed() {
+        Ok(dev_guild_id) => (
+            register_in_guild(ctx, commands, GuildId(dev_guild_id)).await,
+            RegisterType::Globally,
+        ),
+        Err(..) => (
+            register_globally(ctx, commands).await,
+            RegisterType::OnGuild,
+        ),
     };
 
-    let future = match registered {
-        RegisterType::Globally(future) => {
-            info!("Finished register commands globally");
-            future
-        }
-        RegisterType::OnGuild(future) => {
-            info!("Finished registering commands to development guild");
-            future
-        }
-    };
+    info!(
+        "Finished registering commands: {}",
+        Into::<&'static str>::into(&register_type)
+    );
 
-    if let Err(..) = future {
+    if let Err(..) = response {
         propagate_error(
             anyhow!("Failed to register commands...").into(),
             ctx,
