@@ -15,9 +15,7 @@ mod recent;
 use profile::profile;
 use recent::recent;
 
-pub struct OsuUsername {
-    value: String,
-}
+pub struct OsuUsername(pub String);
 
 #[async_trait]
 impl SlashArgument for OsuUsername {
@@ -30,9 +28,7 @@ impl SlashArgument for OsuUsername {
             .as_str()
             .ok_or(SlashArgError::CommandStructureMismatch("Expected string"))?;
 
-        Ok(Self {
-            value: string_value.into(),
-        })
+        Ok(Self(string_value.into()))
     }
 
     fn create(builder: &mut CreateApplicationCommandOption) {

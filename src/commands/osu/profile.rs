@@ -1,21 +1,22 @@
 use anyhow::anyhow;
 use chrono::Duration;
+use discord_md::{ast::MarkdownDocument, builder::one_line_code};
 use poise::{command, serenity_prelude::Colour};
 
 use crate::{
     commands::{
-        osu::embeds::{ComposeMode, DisplayTransformer, EmbedField},
+        osu::embeds::{ComposeMode, EmbedField, SimpleMarkDown},
         CommandReturn,
     },
     messages::timestamps::TimeFormat,
     RikaContext,
 };
 
-use super::{embeds::DisplayValue, OsuUsername};
+use super::{embeds::Prettify, OsuUsername};
 
 #[command(slash_command)]
 pub async fn profile(ctx: RikaContext<'_>, name: OsuUsername) -> CommandReturn {
-    let name = name.value;
+    let name = name.0;
     let data = ctx.data();
 
     let player_data = data
@@ -28,50 +29,28 @@ pub async fn profile(ctx: RikaContext<'_>, name: OsuUsername) -> CommandReturn {
         .statistics
         .ok_or_else(|| anyhow!("Missing statistics..."))?;
 
-    let accuracy_and_level_field = EmbedField::compose(
-        vec![
-            EmbedField::new("Accuracy").display(
-                DisplayValue::Decimal(&statistics.accuracy),
-                vec![DisplayTransformer::Quoted],
-            ),
-            EmbedField::new("Level").display(
-                DisplayValue::Decimal(&statistics.level.float()),
-                vec![DisplayTransformer::Quoted],
-            ),
-        ],
-        ComposeMode::Dotted,
-    );
+    let accuracy_field =
+        EmbedField::new("Accuracy").display(one_line_code(statistics.accuracy.pretty()).md());
+
+    let level_field =
+        EmbedField::new("Level").display(one_line_code(statistics.level.float().pretty()).md());
 
     let playcount_field = EmbedField::new("Playcount")
-        .display(
-            DisplayValue::Plain(&statistics.playcount.to_string()),
-            vec![DisplayTransformer::Quoted],
-        )
-        .information(
-            DisplayValue::Plain(&format!(
-                "{} hrs",
-                Duration::seconds(statistics.playtime.into()).num_hours()
-            )),
-            vec![DisplayTransformer::Quoted],
-        );
+        .display(one_line_code(statistics.playcount.pretty()).md())
+        .info(&format!(
+            "{} hrs",
+            Duration::seconds(statistics.playtime.into()).num_hours()
+        ));
 
-    let medals_field = EmbedField::new("Medals").display(
-        DisplayValue::Plain(&player_data.medals.unwrap_or_default().len().to_string()),
-        vec![DisplayTransformer::Quoted],
-    );
+    let medals_field = EmbedField::new("Medals")
+        .display(one_line_code(&player_data.medals.unwrap_or_default().len().to_string()).md());
 
     let peak_rank_field = player_data
         .highest_rank
         .and_then(|highest_rank| {
             EmbedField::new("Peak rank")
-                .display(
-                    DisplayValue::Plain(&format!("#{}", highest_rank.rank)),
-                    vec![DisplayTransformer::Quoted],
-                )
-                .information(
-                    DisplayValue::Plain(&TimeFormat::ShortDate.format(&highest_rank.updated_at)),
-                    vec![],
-                )
+                .display(one_line_code(&format!("#{}", highest_rank.rank)).md())
+                .info(TimeFormat::ShortDate.format(&highest_rank.updated_at))
                 .into()
         })
         .unwrap_or_default();
@@ -87,7 +66,7 @@ pub async fn profile(ctx: RikaContext<'_>, name: OsuUsername) -> CommandReturn {
 
     let description = EmbedField::compose(
         vec![
-            accuracy_and_level_field,
+            EmbedField::compose(vec![accuracy_field, level_field], ComposeMode::Dotted),
             playcount_field,
             medals_field,
             peak_rank_field,

@@ -1,78 +1,47 @@
-use discord_md::{ast::MarkdownDocument, builder::one_line_code};
 use std::fmt::Display;
 
+use discord_md::ast::{MarkdownDocument, MarkdownElement};
+use num_traits::Num;
+
 #[derive(Default)]
-pub struct EmbedField {
-    value: String,
-}
+pub struct EmbedField(String);
 
 pub enum ComposeMode {
     Dotted,
     BreakRule,
 }
 
-pub enum DisplayTransformer {
-    Quoted,
+pub trait Prettify {
+    fn pretty(self) -> String;
 }
 
-#[derive(Clone, Copy)]
-pub enum DisplayValue<'a> {
-    Plain(&'a str),
-    Decimal(&'a f32),
+pub trait SimpleMarkDown {
+    fn md(self) -> MarkdownDocument;
 }
 
-impl<'a> From<&DisplayValue<'a>> for String {
-    fn from(value: &DisplayValue<'a>) -> Self {
-        match value {
-            DisplayValue::Plain(value) => value.to_string(),
-            DisplayValue::Decimal(value) => format!("{value:.2}"),
-        }
+impl SimpleMarkDown for MarkdownElement {
+    fn md(self) -> MarkdownDocument {
+        MarkdownDocument::new(self)
     }
 }
 
-impl<'a> DisplayValue<'a> {
-    fn display(self, transformers: Vec<DisplayTransformer>) -> String {
-        let text = String::from(&self);
-
-        let text_transformers = transformers.iter().map(|transformer| match transformer {
-            DisplayTransformer::Quoted => |x: &str| one_line_code(x),
-        });
-
-        let transformed_text = text_transformers.fold(text, |acc, f| f(&acc).to_string());
-
-        MarkdownDocument::new(transformed_text).to_string()
+impl<T: Num + Display> Prettify for T {
+    fn pretty(self) -> String {
+        format!("{self:.2}")
     }
 }
 
 impl EmbedField {
-    pub fn new(value: &str) -> Self {
-        Self {
-            value: value.to_string(),
-        }
+    pub fn new(value: impl ToString) -> Self {
+        Self(value.to_string())
     }
 
-    pub fn display(
-        &self,
-        display_value: DisplayValue,
-        transformers: Vec<DisplayTransformer>,
-    ) -> Self {
-        Self::new(&format!(
-            "{}: {} ",
-            self.value,
-            display_value.display(transformers)
-        ))
+    pub fn display(self, value: impl ToString) -> Self {
+        Self::new(&format!("{}: {} ", self.0, value.to_string()))
     }
 
-    pub fn information(
-        &self,
-        display_value: DisplayValue,
-        transformers: Vec<DisplayTransformer>,
-    ) -> Self {
-        Self::new(&format!(
-            "{} ({}) ",
-            self.value,
-            display_value.display(transformers)
-        ))
+    pub fn info(self, value: impl ToString) -> Self {
+        Self::new(&format!("{} ({}) ", self.0, value.to_string()))
     }
 
     pub fn compose(fields: Vec<Self>, mode: ComposeMode) -> Self {
@@ -83,16 +52,16 @@ impl EmbedField {
 
         let composed_string = fields
             .iter()
-            .map(|f| &*f.value)
+            .map(|f| &*f.0)
             .collect::<Vec<&str>>()
             .join(join_string);
 
-        Self::new(&composed_string)
+        Self::new(composed_string)
     }
 }
 
 impl Display for EmbedField {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.value)
+        write!(f, "{}", self.0)
     }
 }

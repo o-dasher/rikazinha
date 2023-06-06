@@ -4,18 +4,11 @@ use poise::{
     serenity_prelude::{self, GuildId},
     Framework, FrameworkError,
 };
-use rosu_v2::{prelude::OsuError, Osu};
+use rosu_v2::Osu;
 use strum_macros::IntoStaticStr;
 use tracing::info;
 
-use crate::{error::RikaError, utils::env::EnvVar, RikaData};
-
-async fn create_osu_client() -> Result<Osu, OsuError> {
-    let osu_client_id: u64 = EnvVar::OsuClientId.get_parsed().unwrap();
-    let osu_client_secret = EnvVar::OsuClientSecret.get().unwrap();
-
-    Osu::new(osu_client_id, osu_client_secret).await
-}
+use crate::{error::RikaError, Environment, RikaData};
 
 pub fn propagate_error(
     error: RikaError,
@@ -23,7 +16,9 @@ pub fn propagate_error(
     ready: &serenity_prelude::Ready,
     framework: &Framework<RikaData, RikaError>,
 ) {
-    (framework.options().on_error)(FrameworkError::Setup {
+    let error_handler = framework.options().on_error;
+
+    error_handler(FrameworkError::Setup {
         error,
         framework,
         data_about_bot: ready,
@@ -41,17 +36,18 @@ pub async fn setup(
     ctx: &serenity_prelude::Context,
     ready: &serenity_prelude::Ready,
     framework: &Framework<RikaData, RikaError>,
+    config: Environment,
 ) -> Result<RikaData, RikaError> {
     let commands = &framework.options().commands;
 
-    let (response, register_type) = match EnvVar::DevGuild.get_parsed() {
-        Ok(dev_guild_id) => (
-            register_in_guild(ctx, commands, GuildId(dev_guild_id)).await,
-            RegisterType::Globally,
-        ),
-        Err(..) => (
-            register_globally(ctx, commands).await,
+    let (response, register_type) = match config.dev_guild {
+        Some(dev_guild) => (
+            register_in_guild(ctx, commands, GuildId(dev_guild)).await,
             RegisterType::OnGuild,
+        ),
+        None => (
+            register_globally(ctx, commands).await,
+            RegisterType::Globally,
         ),
     };
 
@@ -69,7 +65,9 @@ pub async fn setup(
         )
     }
 
-    let osu_client = create_osu_client().await.map_err(anyhow::Error::msg)?;
+    let osu_client = Osu::new(config.osu_client_id, &config.osu_client_secret)
+        .await
+        .map_err(anyhow::Error::msg)?;
 
     Ok(RikaData { osu: osu_client })
 }
